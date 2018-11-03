@@ -53,10 +53,10 @@ async function genClick(element){
 
 var modalhtml = `
   <h4>Please Enter your Passphrase: </h4>
-  <input type="password" id="passphrase"> 
-  <input class="switch" id="buttonM" type=button value="Activate Pmail"> 
-  <input class="switch" id="buttonK" type=button value="Import Keys"> 
-  <input class="switch" id="buttonG" type=button value="Generate Keys"> 
+  <input type="password" id="passphrase">
+  <input class="switch" id="buttonM" type=button value="Activate Pmail">
+  <input class="switch" id="buttonK" type=button value="Import Keys">
+  <input class="switch" id="buttonG" type=button value="Generate Keys">
   <p id="acc"></p>
   <textarea id="priv"
   rows="10" cols="50"></textarea>
@@ -101,21 +101,21 @@ var main = async function(){
     user.privatekey = localStorage.getItem(storPrivkey);
 
   }
-  
+
   gmail.tools.add_toolbar_button('Pmail', function() {
-    gmail.tools.add_modal_window('Pmail', 
+    gmail.tools.add_modal_window('Pmail',
     modalhtml+'<script>'+modaljs+'</script>',
       function() {
-    
+
         gmail.tools.remove_modal_window();
       });
   }, 'ptool');
 
 
 
-  
+
 /*  gmail.observe.before('send_message', function(url, body, data, xhr){
-    console.log("url:", url, 'body', body, 'email_data', data, 'xhr', xhr);  
+    console.log("url:", url, 'body', body, 'email_data', data, 'xhr', xhr);
     var oldCmml = xhr.xhrParams.url.cmml;
 
     var body_params = xhr.xhrParams.body_params;
@@ -139,13 +139,13 @@ var main = async function(){
             window.ComposeEncrypted = false;
             window.ComposeRef.body(plaintext);
           }, 100);
-        });               
+        });
 
       } else {
         var receivers = window.ComposeRef.recipients().to;
         var emails = [];
         var plaintext = window.ComposeRef.body();
-    
+
         for(i=0;i< receivers.length;i++){
           emails[i] =receivers[i].replace(/^.*?<(.*?)>.*?$/g, "$1");
         }
@@ -156,40 +156,41 @@ var main = async function(){
             window.ComposeRef.body('{'+results.join(",")+'}');
           }, 100);
         });
-      }        
+      }
     }, 'ptool');
   });
-  
+
   gmail.observe.on('view_thread', function(obj) {
     console.log('view_thread', obj);
   });
-  gmail.observe.on("view_email", function(obj) {
-    console.log("here");
-    window.emailRef = obj;
-    var ciphertextList = $(obj.body()).text();
-      if(ciphertextList != ""){
-        try {
 
-          var cListObj = JSON.parse("{"+ciphertextList.match(/[^}{]+(?=})/s)[0]+"}");
-          var ciphertext = decodeURIComponent(cListObj[user.email]);
-          console.log(ciphertext);
-          decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
-            if(!searchable_list.includes(window.emailRef.id)){
-              createEncryptedIndex(plaintext,window.emailRef.id)
-            }
-            setTimeout(() => {
-              window.emailRef.body(plaintext);
-            }, 100);
-          });
-        } catch (e){
-          console.log("Not Pmail email");
-        }
+  gmail.observe.on("view_email", function(obj) {
+    console.log("view_email");
+
+    var ciphertextRaw = obj.dom('body')[0]['innerText'];
+    if(ciphertextRaw != ""){
+      try {
+        var matches = ciphertextRaw.match(/({[^}{]+})/g);
+        var ciphertextJson = JSON.parse(matches[0]);
+        var ciphertext = unescape(ciphertextJson[user.email]);
+        decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
+          message_id = obj['$el'][0]['attributes']['data-message-id'].value
+          if(!searchable_list.includes(message_id)){
+            createEncryptedIndex(plaintext,message_id)
+          }
+          setTimeout(() => {
+            obj.dom('body')[0]['innerText'] = plaintext;
+          }, 100);
+        });
+      } catch (e){
+        console.log("Not Pmail email");
+      }
     }
   });
-   
-  
+
+
   gmail.observe.before('http_event', function(params) {
-    
+
       var query = params['url']['q'];
       console.log(query)
       if(query && !query.includes("rfc822msgid")) {
@@ -201,7 +202,7 @@ var main = async function(){
         query = localStorage["prev_query"];
         setSearchBar(query);
       }
-      
+
   });
 
 }
@@ -257,17 +258,17 @@ async function generateKeys(upload){
       numBits: 4096,                                 // RSA key size
       passphrase: user.passphrase                     // protects the private key
     };
-    
+
     const key = await openpgp.generateKey(options);
     if (user.privatekey == ""){
-      user.privatekey = key.privateKeyArmored; 
-      user.publickey = key.publicKeyArmored;  
-    } 
+      user.privatekey = key.privateKeyArmored;
+      user.publickey = key.publicKeyArmored;
+    }
     if(upload){
       //hkp.upload(user.publickey).then(function() {  });
       postPublicKey(user.email,user.publickey);
     }
-    localStorage.setItem(storPrivkey, user.privatekey); 
+    localStorage.setItem(storPrivkey, user.privatekey);
     localStorage.setItem(storPubkey, user.publickey);
   }
 }
@@ -291,8 +292,8 @@ function postPublicKey(email,publickey){
 async function importAccount(){
   if (user.privatekey != "" && user.publickey != "" && user.passphrase != ""){
     postPublicKey(user.email,user.publickey);
-    localStorage.setItem(storPrivkey, user.privatekey); 
-    localStorage.setItem(storPubkey, user.publickey); 
+    localStorage.setItem(storPrivkey, user.privatekey);
+    localStorage.setItem(storPubkey, user.publickey);
   }
 }
 
@@ -350,7 +351,7 @@ async function decrypt(ciphertext, privatekey, passphrase){
  * Creates and encrypted index and sends it to the Pmail server
  * @param  {String} plaintext_body The decrypted email
  * @param  {String} email_id       The gmail id
- * @return {void}                
+ * @return {void}
  */
 async function createEncryptedIndex(plaintext_body, email_id) {
   // Clean the html tags from the body. This will delete anything between
@@ -384,7 +385,7 @@ async function createEncryptedIndex(plaintext_body, email_id) {
   }
 }
 /**
- * Translates the Gmail IDs to RFC IDs and redirects the user to a 
+ * Translates the Gmail IDs to RFC IDs and redirects the user to a
  * Gmail search page
  * @param  {String} query 	The plaintext search query given by the user
  * @return {void}       	void
@@ -402,10 +403,10 @@ async function loadSearchResults(query){
     for (var i = 0; i < ids.length; i++) {
       RFCid = await getRFCid(ids[i])
       // Add the RFC822 message ID to the list
-      msgids.push("rfc822msgid:".concat(RFCid)); 
+      msgids.push("rfc822msgid:".concat(RFCid));
     }
     // Create the search query for the search box
-    search_query = msgids.join(" OR "); 
+    search_query = msgids.join(" OR ");
     console.log("search_query:", search_query);
     url = encodeURIComponent(search_query);
     user_index = getUserNumber();
@@ -415,8 +416,8 @@ async function loadSearchResults(query){
     //window.location.href = url; doesnt work
     window.location.replace(url);
   }
-  
-}   
+
+}
 
 async function getIds(queryList){
   queryHashList = []
@@ -479,8 +480,8 @@ function getUserNumber() {
   	return window.location.href.match(/mail\/u\/(\d+)/)[1]
   }
   for (var i in logged_in_users) {
-    if (logged_in_users[i].email == username) 
-      return logged_in_users[i].index; 
+    if (logged_in_users[i].email == username)
+      return logged_in_users[i].index;
   }
 }
 /**
@@ -492,7 +493,7 @@ function getUserNumber() {
 async function tokenize(keyword) {
   const hash = await sha256(keyword + user.privatekey);
   console.log(hash);
-  return hash; 
+  return hash;
 }
 async function sha256(message) {
   // encode as UTF-8
@@ -500,7 +501,7 @@ async function sha256(message) {
 
   // hash the message
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  
+
   // convert ArrayBuffer to Array
   const hashArray = Array.from(new Uint8Array(hashBuffer));
 
