@@ -157,27 +157,28 @@ var main = async function(){
   gmail.observe.on('view_thread', function(obj) {
     console.log('view_thread', obj);
   });
-  gmail.observe.on("view_email", function(obj) {
-    console.log("here");
-    window.emailRef = obj;
-    var ciphertextList = $(obj.body()).text();
-      if(ciphertextList != ""){
-        try {
 
-          var cListObj = JSON.parse("{"+ciphertextList.match(/[^}{]+(?=})/s)[0]+"}");
-          var ciphertext = decodeURIComponent(cListObj[user.email]);
-          console.log(ciphertext);
-          decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
-            if(!searchable_list.includes(window.emailRef.id)){
-              createEncryptedIndex(plaintext,window.emailRef.id)
-            }
-            setTimeout(() => {
-              window.emailRef.body(plaintext);
-            }, 100);
-          });
-        } catch (e){
-          console.log("Not Pmail email");
-        }
+  gmail.observe.on("view_email", function(obj) {
+    console.log("view_email");
+
+    var ciphertextRaw = obj.dom('body')[0]['innerText'];
+    if(ciphertextRaw != ""){
+      try {
+        var matches = ciphertextRaw.match(/({[^}{]+})/g);
+        var ciphertextJson = JSON.parse(matches[0]);
+        var ciphertext = unescape(ciphertextJson[user.email]);
+        decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
+          message_id = obj['$el'][0]['attributes']['data-message-id'].value
+          if(!searchable_list.includes(message_id)){
+            createEncryptedIndex(plaintext,message_id)
+          }
+          setTimeout(() => {
+            obj.dom('body')[0]['innerText'] = plaintext;
+          }, 100);
+        });
+      } catch (e){
+        console.log("Not Pmail email");
+      }
     }
   });
 
