@@ -12,18 +12,13 @@ function refresh(f) {
 var modaljs = `
 hello();
 console.log(user);
-
 document.getElementById("priv").value = user.privatekey;
 document.getElementById("pub").value = user.publickey;
-
-
 if(document.getElementById("buttonM") != null){
   document.getElementById("buttonM").addEventListener("click", passClick);
 }
 document.getElementById("buttonK").addEventListener("click", importClick);
 document.getElementById("buttonG").addEventListener("click", genClick);
-
-
 async function passClick(element){
   user.passphrase = document.getElementById("passphrase").value;
   if((await checkAccount()) == true){
@@ -33,7 +28,6 @@ async function passClick(element){
     document.getElementById("acc").innerHTML = "Account invalid";
   }
 }
-
 async function importClick(element){
   user.passphrase = document.getElementById("passphrase").value;
   user.privatekey = document.getElementById("priv").value;
@@ -41,7 +35,6 @@ async function importClick(element){
   if((await checkAccount())){
     importAccount();
   }
-
 }
 async function genClick(element){
   user.passphrase = document.getElementById("passphrase").value;
@@ -60,7 +53,6 @@ var modalhtml = `
   <p id="acc"></p>
   <textarea id="priv"
   rows="10" cols="50"></textarea>
-
   <textarea id="pub"
   rows="10" cols="50"></textarea>
   `
@@ -102,7 +94,9 @@ var main = async function(){
 
   }
 
-  gmail.tools.add_toolbar_button('Pmail', function() {
+  var iconLink = "https://cdn3.iconfinder.com/data/icons/black-easy/512/538522-lock_512x512.png";
+
+  gmail.tools.add_toolbar_button('<div class="T-I J-J5-Ji ash ptool" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" data-tooltip="Pmail" aria-label="Settings" style="user-select: none;"><img class="inboxsdk__button_iconImg" src="' + iconLink + '"></div>', function() {
     gmail.tools.add_modal_window('Pmail',
     modalhtml+'<script>'+modaljs+'</script>',
       function() {
@@ -117,47 +111,47 @@ var main = async function(){
 /*  gmail.observe.before('send_message', function(url, body, data, xhr){
     console.log("url:", url, 'body', body, 'email_data', data, 'xhr', xhr);
     var oldCmml = xhr.xhrParams.url.cmml;
-
     var body_params = xhr.xhrParams.body_params;
-
-
     console.log(oldCmml, xhr.xhrParams.url.cmml, string);
   });*/
 
   gmail.observe.on("compose", function(compose, type) {
     window.ComposeRef = compose;
     window.ComposeEncrypted = false;
-    gmail.tools.add_compose_button(compose, '(En|De)crypt',
-    function(temp) {
-      if(window.ComposeEncrypted){
-        var ciphertextList = window.ComposeRef.body();
-        var cListObj = JSON.parse(ciphertextList);
-        var ciphertext = decodeURIComponent(cListObj[user.email]);
-        console.log(ciphertext);
-        decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
-          setTimeout(() => {
-            window.ComposeEncrypted = false;
-            window.ComposeRef.body(plaintext);
-          }, 100);
-        });
+    if (user.pmail_active) {
+      var iconLink = "https://cdn3.iconfinder.com/data/icons/black-easy/512/538522-lock_512x512.png";
+      gmail.tools.add_compose_button(compose, '<div class="T-I J-J5-Ji ash ptool" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" data-tooltip="Pmail" aria-label="Settings" style="user-select: none;"><img class="inboxsdk__button_iconImg" src="' + iconLink + '"></div>',
+      function(temp) {
+        if(window.ComposeEncrypted){
+          var ciphertextList = window.ComposeRef.body();
+          var cListObj = JSON.parse(ciphertextList);
+          var ciphertext = decodeURIComponent(cListObj[user.email]);
+          console.log(ciphertext);
+          decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
+            setTimeout(() => {
+              window.ComposeEncrypted = false;
+              window.ComposeRef.body(plaintext);
+            }, 100);
+          });
 
-      } else {
-        var receivers = window.ComposeRef.recipients().to;
-        var emails = [];
-        var plaintext = window.ComposeRef.body();
+        } else {
+          var receivers = window.ComposeRef.recipients().to;
+          var emails = [];
+          var plaintext = window.ComposeRef.body();
 
-        for(i=0;i< receivers.length;i++){
-          emails[i] =receivers[i].replace(/^.*?<(.*?)>.*?$/g, "$1");
+          for(i=0;i< receivers.length;i++){
+            emails[i] =receivers[i].replace(/^.*?<(.*?)>.*?$/g, "$1");
+          }
+          emails.push(user.email)
+          var encryptedList = Promise.all(emails.map(elem => encryptEmail(plaintext,elem))).then( function(results) {
+            setTimeout(() => {
+              window.ComposeEncrypted = true;
+              window.ComposeRef.body('{'+results.join(",")+'}');
+            }, 100);
+          });
         }
-        emails.push(user.email)
-        var encryptedList = Promise.all(emails.map(elem => encryptEmail(plaintext,elem))).then( function(results) {
-          setTimeout(() => {
-            window.ComposeEncrypted = true;
-            window.ComposeRef.body('{'+results.join(",")+'}');
-          }, 100);
-        });
-      }
-    }, 'ptool');
+      }, 'ptool');
+    };
   });
 
   gmail.observe.on('view_thread', function(obj) {
