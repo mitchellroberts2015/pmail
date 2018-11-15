@@ -108,8 +108,8 @@ var main = async function(){
       function() {
     
         gmail.tools.remove_modal_window();
-      });
-  }, 'ptool');
+				 });
+      }, 'ptool');
 
 
 
@@ -176,22 +176,22 @@ var main = async function(){
           decrypt(ciphertext,user.privatekey, user.passphrase).then(function(plaintext){
             if(!searchable_list.includes(window.emailRef.id)){
               createEncryptedIndex(plaintext,window.emailRef.id)
-            }
+		  }
             setTimeout(() => {
               window.emailRef.body(plaintext);
-            }, 100);
-          });
-        } catch (e){
+		}, 10000);
+	      });
+      } catch (e){
           console.log("Not Pmail email");
-        }
-    }
-  });
+      }
+      }
+      });
    
-  
   gmail.observe.before('http_event', function(params) {
-    
+      console.log("Print");
       var query = params['url']['q'];
-      console.log(query)
+      console.log(query);
+      console.log("Printing Query");
       if(query && !query.includes("rfc822msgid")) {
         query = decodeURIComponent(query).toLowerCase();
         localStorage["prev_query"] = query;
@@ -202,7 +202,7 @@ var main = async function(){
         setSearchBar(query);
       }
       
-  });
+      });
 
 }
 function hello(){
